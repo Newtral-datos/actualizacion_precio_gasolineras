@@ -1,4 +1,4 @@
-name: Daily PMTiles Build & Publish
+name: Construir y publicar PMTiles diario
 
 on:
   schedule:
@@ -15,7 +15,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
+  construir:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -24,50 +24,50 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install system deps
+      - name: Instalar dependencias del sistema
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential libsqlite3-dev zlib1g-dev golang-go
 
-      - name: Build and install tippecanoe
+      - name: Compilar e instalar tippecanoe
         run: |
           git clone --depth=1 https://github.com/mapbox/tippecanoe.git
           cd tippecanoe
           make -j"$(nproc)"
           sudo make install
 
-      - name: Install pmtiles CLI
+      - name: Instalar pmtiles CLI
         run: |
-          GOBIN=$HOME/go/bin go install github.com/protomaps/go-pmtiles/cmd/pmtiles@latest
+          GOBIN=$HOME/go/bin go install github.com/protomaps/pmtiles/cmd/pmtiles@latest
           echo "$HOME/go/bin" >> $GITHUB_PATH
 
-      - name: Install Python deps
+      - name: Instalar dependencias de Python
         run: |
           pip install -r requirements.txt
 
-      - name: Run pipeline
+      - name: Ejecutar pipeline
         run: |
           python run.py
 
-      - name: Convert to PMTiles and prepare site
+      - name: Convertir a PMTiles y preparar sitio
         run: |
           mkdir -p public
           pmtiles convert data/estaciones.mbtiles public/estaciones.pmtiles
           cp data/stats.json public/stats.json
           printf '<!doctype html><meta charset="utf-8"><h1>PMTiles publicado</h1>' > public/index.html
 
-      - name: Upload artifact
+      - name: Subir artefacto
         uses: actions/upload-pages-artifact@v3
         with:
           path: public
 
-  deploy:
+  desplegar:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
-    needs: build
+    needs: construir
     steps:
-      - name: Deploy
+      - name: Desplegar
         id: deployment
         uses: actions/deploy-pages@v4
