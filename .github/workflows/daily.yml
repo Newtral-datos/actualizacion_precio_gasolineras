@@ -2,7 +2,7 @@ name: Build and Publish PMTiles Daily
 
 on:
   schedule:
-    - cron: "0 5 * * *"
+    - cron: "0 5 * * *"      # 07:00 Europe/Madrid
   workflow_dispatch: {}
 
 permissions:
@@ -30,6 +30,9 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run pipeline (creates data/estaciones.mbtiles and data/stats.json)
+        env:
+          MAPBOX_ACCESS_TOKEN: ${{ secrets.MAPBOX_ACCESS_TOKEN }}
+          MAPBOX_TILESET_ID: ${{ secrets.MAPBOX_TILESET_ID }}
         run: |
           python run.py
 
@@ -38,7 +41,11 @@ jobs:
           mkdir -p public
           docker run --rm -v "${{ github.workspace }}:/work" -w /work protomaps/go-pmtiles:latest convert data/estaciones.mbtiles public/estaciones.pmtiles
           cp data/stats.json public/stats.json
-          printf '<!doctype html><meta charset="utf-8"><h1>PMTiles published</h1>' > public/index.html
+          # Copia TU frontend al sitio
+          cp index.html public/index.html
+          cp styles.css public/styles.css
+          # si tu JS se llama app.js:
+          cp app.js public/app.js
 
       - name: Publish to gh-pages
         uses: peaceiris/actions-gh-pages@v3
