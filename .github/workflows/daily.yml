@@ -1,8 +1,8 @@
-name: Build and Publish PMTiles Daily
+name: Build and Publish PMTiles + Site
 
 on:
   schedule:
-    - cron: "0 5 * * *"      # 07:00 Europe/Madrid
+    - cron: "0 5 * * *"     # 07:00 Madrid
   workflow_dispatch: {}
 
 permissions:
@@ -25,27 +25,26 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y tippecanoe
 
-      - name: Install Python dependencies
+      - name: Install Python deps
         run: |
           pip install -r requirements.txt
 
       - name: Run pipeline (creates data/estaciones.mbtiles and data/stats.json)
-        env:
-          MAPBOX_ACCESS_TOKEN: ${{ secrets.MAPBOX_ACCESS_TOKEN }}
-          MAPBOX_TILESET_ID: ${{ secrets.MAPBOX_TILESET_ID }}
         run: |
           python run.py
 
       - name: Convert to PMTiles and prepare site
         run: |
           mkdir -p public
-          docker run --rm -v "${{ github.workspace }}:/work" -w /work protomaps/go-pmtiles:latest convert data/estaciones.mbtiles public/estaciones.pmtiles
-          cp data/stats.json public/stats.json
-          # Copia TU frontend al sitio
-          cp index.html public/index.html
-          cp styles.css public/styles.css
-          # si tu JS se llama app.js:
-          cp app.js public/app.js
+          # convierte MBTiles -> PMTiles
+          docker run --rm -v "${{ github.workspace }}:/work" -w /work protomaps/go-pmtiles:latest \
+            convert data/estaciones.mbtiles public/estaciones.pmtiles
+          # copia datos y TU frontend (¡sin placeholder!)
+          cp -v data/stats.json public/stats.json
+          cp -v index.html public/index.html
+          cp -v styles.css public/styles.css
+          cp -v app.js public/app.js
+          echo "Contenido de public/"; ls -la public
 
       - name: Publish to gh-pages
         uses: peaceiris/actions-gh-pages@v3
