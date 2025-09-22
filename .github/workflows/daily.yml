@@ -1,0 +1,71 @@
+name: Daily PMTiles Build & Publish
+
+on:
+  schedule:
+    - cron: "0 5 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y tippecanoe golang
+
+      - name: Install pmtiles CLI
+        run: |
+          GOBIN=$HOME/go/bin go install github.com/protomaps/go-pmtiles/cmd/pmtiles@latest
+          echo "$HOME/go/bin" >> $GITHUB_PATH
+
+      - name: Install Python deps
+        run: |
+          pip install -r requirements.txt
+
+      - name: Run pipeline (creates data/estaciones.mbtiles and data/stats.json)
+        run: |
+          python run.py
+
+      - name: Convert to PMTiles and prepare site
+        run: |
+          mkdir -p public
+          pmtiles convert data/estaciones.mbtiles public/estaciones.pmtiles
+          cp data/stats.json public/stats.json
+          # Índice mínimo para comprobar publicación.
+          cat > public/index.html <<'HTML'
+<!doctype html><meta charset="utf-8">
+<h1>estaciones.pmtiles publicado</h1>
+<p>URL del PMTiles: <code>estaciones.pmtiles</code></p>
+HTML
+
+      - name: Upload artifact to Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
