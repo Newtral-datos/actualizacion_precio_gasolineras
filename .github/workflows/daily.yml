@@ -29,15 +29,14 @@ jobs:
       - name: Install system packages
         run: |
           sudo apt-get update
-          sudo apt-get install -y tippecanoe curl
+          sudo apt-get install -y build-essential libsqlite3-dev zlib1g-dev
 
-      - name: Install PMTiles CLI
+      - name: Build and install tippecanoe
         run: |
-          PMTILES_VERSION="v1.28.1"
-          curl -L -o pmtiles "https://github.com/protomaps/go-pmtiles/releases/download/${PMTILES_VERSION}/pmtiles-linux-amd64"
-          chmod +x pmtiles
-          sudo mv pmtiles /usr/local/bin/pmtiles
-          pmtiles --help
+          git clone --depth=1 https://github.com/mapbox/tippecanoe.git
+          cd tippecanoe
+          make -j"$(nproc)"
+          sudo make install
 
       - name: Install Python dependencies
         run: |
@@ -50,7 +49,7 @@ jobs:
       - name: Convert to PMTiles and prepare site
         run: |
           mkdir -p public
-          pmtiles convert data/estaciones.mbtiles public/estaciones.pmtiles
+          docker run --rm -v "${{ github.workspace }}:/work" -w /work protomaps/go-pmtiles:latest pmtiles convert data/estaciones.mbtiles public/estaciones.pmtiles
           cp data/stats.json public/stats.json
           printf '<!doctype html><meta charset="utf-8"><h1>PMTiles published</h1>' > public/index.html
 
