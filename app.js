@@ -40,60 +40,80 @@ const rangeEl = document.getElementById('range');
 const minLabel = document.getElementById('min-label');
 const maxLabel = document.getElementById('max-label');
 
+/* Mapa base: mismo estilo CARTO Positron (vector, sin API key) que PANEL_LLUVIAS */
+const CARTO_STYLE_URL = 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
+
+function localizarEtiquetasCarto(estilo) {
+  const layers = estilo.layers.map((layer) => {
+    const textField = layer.layout?.['text-field'];
+    const localizado =
+      textField === undefined ? undefined : JSON.parse(JSON.stringify(textField).replaceAll('name_en', 'name'));
+    return {
+      ...layer,
+      ...(localizado !== undefined && { layout: { ...layer.layout, 'text-field': localizado } })
+    };
+  });
+  return { ...estilo, layers };
+}
+
 /* Mapa */
-const map = new maplibregl.Map({
-  container: 'map',
-  style: { version: 8, sources: {}, layers: [] },
-  center: INITIAL_CENTER, zoom: INITIAL_ZOOM, antialias: true
-});
-map.addControl(new maplibregl.NavigationControl(), 'top-right');
+let map;
 
-/* Mapa base */
-map.on('load', () => {
-  map.addSource('basemap', {
-    type: 'raster',
-    tiles: ['https://cartodb-basemaps-a.global.ssl.fastly.net/light_all/{z}/{x}/{y}{r}.png'],
-    tileSize: 256,
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> © <a href="https://carto.com/">CARTO</a>'
-  });
-  map.addLayer({ id: 'basemap', type: 'raster', source: 'basemap' });
+(async () => {
+  const cartoStyleRaw = await fetch(CARTO_STYLE_URL).then(r => r.json());
+  const cartoStyle = localizarEtiquetasCarto(cartoStyleRaw);
 
-  /* PMTiles */
-  const protocol = new pmtiles.Protocol();
-  maplibregl.addProtocol('pmtiles', protocol.tile);
-  const p = new pmtiles.PMTiles(PMTILES_URL);
-  protocol.add(p);
+  map = new maplibregl.Map({
+    container: 'map',
+    style: {
+      version: 8,
+      sources: cartoStyle.sources,
+      sprite: cartoStyle.sprite,
+      glyphs: cartoStyle.glyphs,
+      layers: cartoStyle.layers
+    },
+    center: INITIAL_CENTER, zoom: INITIAL_ZOOM, antialias: true
+  });
+  map.addControl(new maplibregl.NavigationControl(), 'top-right');
 
-  map.addSource('stations', { type: 'vector', url: `pmtiles://${PMTILES_URL}` });
-  map.addLayer({
-    id: 'stations-circles',
-    type: 'circle',
-    source: 'stations',
-    'source-layer': 'estaciones',
-    paint: {
-      'circle-radius': ['interpolate', ['linear'], ['zoom'], 4, 0.6, 6, 2, 8, 3.5, 10, 5],
-      'circle-color': circleColorExpr(currentFuel),
-      'circle-stroke-color': circleColorExpr(currentFuel),
-      'circle-stroke-width': 0.6,
-      'circle-opacity': 0.95
-    }
-  });
+  map.on('load', () => {
+    /* PMTiles */
+    const protocol = new pmtiles.Protocol();
+    maplibregl.addProtocol('pmtiles', protocol.tile);
+    const p = new pmtiles.PMTiles(PMTILES_URL);
+    protocol.add(p);
 
-  ensureGlobalStats(currentFuel).then(() => {
-    updateLegendTitle();
-    syncSliderLegendAndStyle();
-  });
+    map.addSource('stations', { type: 'vector', url: `pmtiles://${PMTILES_URL}` });
+    map.addLayer({
+      id: 'stations-circles',
+      type: 'circle',
+      source: 'stations',
+      'source-layer': 'estaciones',
+      paint: {
+        'circle-radius': ['interpolate', ['linear'], ['zoom'], 4, 0.6, 6, 2, 8, 3.5, 10, 5],
+        'circle-color': circleColorExpr(currentFuel),
+        'circle-stroke-color': circleColorExpr(currentFuel),
+        'circle-stroke-width': 0.6,
+        'circle-opacity': 0.95
+      }
+    });
 
-  map.on('mousemove','stations-circles', e => {
-    if (!e.features?.length) return;
-    map.getCanvas().style.cursor = 'pointer';
-    const p = e.features[0].properties || {};
-    showPopup(e.lngLat, popupHTML(p));
+    ensureGlobalStats(currentFuel).then(() => {
+      updateLegendTitle();
+      syncSliderLegendAndStyle();
+    });
+
+    map.on('mousemove','stations-circles', e => {
+      if (!e.features?.length) return;
+      map.getCanvas().style.cursor = 'pointer';
+      const p = e.features[0].properties || {};
+      showPopup(e.lngLat, popupHTML(p));
+    });
+    map.on('mouseleave','stations-circles', () => {
+      map.getCanvas().style.cursor = ''; hidePopup();
+    });
   });
-  map.on('mouseleave','stations-circles', () => {
-    map.getCanvas().style.cursor = ''; hidePopup();
-  });
-});
+})();
 
 /* Leyenda */
 function buildLegend(){
@@ -200,13 +220,13 @@ function popupHTML(p){
 
 /* Filtros */
 function restyleLayer(){
-  if (!map.getLayer('stations-circles')) return;
+  if (!map || !map.getLayer('stations-circles')) return;
   const expr = circleColorExpr(currentFuel);
   map.setPaintProperty('stations-circles','circle-color', expr);
   map.setPaintProperty('stations-circles','circle-stroke-color', expr);
 }
 function applyFilters(){
-  if (!map.getLayer('stations-circles')) return;
+  if (!map || !map.getLayer('stations-circles')) return;
   const [minV,maxV] = rangeEl.noUiSlider.get().map(Number);
   map.setFilter('stations-circles', ['all', ['>=', activePriceExpr(), minV], ['<=', activePriceExpr(), maxV]]);
 }
