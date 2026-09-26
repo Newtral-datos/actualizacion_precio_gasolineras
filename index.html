@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>Precios de carburantes</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
+  <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+  <script src="https://unpkg.com/pmtiles@3.0.6/dist/pmtiles.js"></script>
+
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.7.1/nouislider.min.css" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.7.1/nouislider.min.js"></script>
+
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app">
+    <header id="ui">
+      <div class="ui-inner">
+        <!-- Izquierda: botones -->
+        <div class="ui-left">
+          <div id="fuel-tabs" class="tabs">
+            <button class="tab is-active" data-fuel="g95" aria-selected="true">Gasolina 95</button>
+            <button class="tab" data-fuel="diesel" aria-selected="false">Diésel</button>
+          </div>
+        </div>
+
+        <!-- Centro: leyenda -->
+        <div class="ui-center">
+          <div id="legend" class="legend">
+            <h3 id="legend-title-text" class="legend-title">Precio de la Gasolina</h3>
+            <div class="legend-grid">
+              <div id="legend-swatches" class="legend-swatches"></div>
+              <div id="legend-labels" class="legend-labels"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Derecha: slider -->
+        <div class="ui-right">
+          <div id="slider" class="slider-wrap">
+            <div id="range"></div>
+            <div class="slider-labels">
+              <span id="min-label"></span>
+              <span class="sep">—</span>
+              <span id="max-label"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main id="map"></main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
