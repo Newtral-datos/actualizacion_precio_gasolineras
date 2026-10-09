@@ -29,9 +29,17 @@ jobs:
         run: |
           pip install -r requirements.txt
 
-      - name: Run pipeline (creates data/estaciones.mbtiles and data/stats.json)
+      - name: Actualizar gasolineras, geometrías (data/) y precio por provincia (datos_mapa/)
         run: |
           python run.py
+
+      - name: Commit datos_mapa/ si ha cambiado
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add datos_mapa
+          git diff --cached --quiet || git commit -m "Datos actualizados $(date -u +%Y-%m-%d)"
+          git push
 
       - name: Convert to PMTiles and prepare site
         run: |
