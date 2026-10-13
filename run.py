@@ -242,6 +242,14 @@ def actualizar_historico(df: pd.DataFrame, fecha_api) -> None:
     hist.to_csv(RUTA_HISTORICO, index=False, encoding="utf-8")
     print(f"Histórico: añadido {fila['fecha']} (gasolina {fila['Gasolina 95 E5']} | diésel {fila['Diésel']})")
 
+    # Nota al pie del gráfico de líneas, con el mismo formato que la de los mapas
+    actualizado = fecha_api or datetime.now(ZONA).strftime("%d/%m/%Y %H:%M")
+    nota = (f"Datos actualizados: {actualizado}. "
+            f"Precio medio nacional de la gasolina 95: {fmt(fila['Gasolina 95 E5'])} €/l; "
+            f"del gasóleo A: {fmt(fila['Diésel'])} €/l.")
+    (RUTA_HISTORICO.parent / "metadata_evolucion.json").write_text(
+        json.dumps({"annotate": {"notes": nota}}, ensure_ascii=False, indent=2), encoding="utf-8")
+
 # ---------- Principal ----------
 def main():
     ahora = datetime.now(ZONA)
