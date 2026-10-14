@@ -209,6 +209,46 @@ def exportar_mapas(df: pd.DataFrame, actualizado: str) -> None:
         if faltan:
             print(f"Aviso ({nombre}): provincias sin datos este día: {[NOMBRES_INE[c] for c in faltan]}")
 
+# ---------- Histórico diario para el gráfico de líneas ----------
+# Se guarda junto a datos_mapa/, en datos_grafico/evolucion_precios.csv
+RUTA_HISTORICO = RUTA_MAPA.parent / "datos_grafico" / "evolucion_precios.csv"
+SERIES_HISTORICO = {"Gasolina 95 E5": "Precio Gasolina 95 E5", "Diésel": "Precio Gasoleo A"}
+
+
+def actualizar_historico(df: pd.DataFrame, fecha_api) -> None:
+    """Añade al histórico la media nacional del día. Si ese día ya estaba, lo sustituye."""
+    # El día es el de la fecha de actualización del ministerio ("13/10/2026 7:45:12")
+    if fecha_api:
+        dia = datetime.strptime(fecha_api.split()[0], "%d/%m/%Y").date()
+    else:
+        dia = datetime.now(ZONA).date()
+
+    fila = {"fecha": dia.isoformat()}
+    for nombre, col in SERIES_HISTORICO.items():
+        # Mismo criterio que el histórico descargado: se descartan precios fuera de 0,50-4 €/l
+        precios = df[col][df[col].between(0.5, 4.0)]
+        fila[nombre] = round(precios.mean(), 3)
+
+    nueva = pd.DataFrame([fila])
+    if RUTA_HISTORICO.exists():
+        hist = pd.read_csv(RUTA_HISTORICO, dtype={"fecha": str})
+        hist = hist[hist["fecha"] != fila["fecha"]]          # quita el día si ya estaba
+        hist = nueva if hist.empty else pd.concat([hist, nueva], ignore_index=True)
+    else:
+        hist = nueva
+    hist = hist.sort_values("fecha").reset_index(drop=True)
+
+    RUTA_HISTORICO.parent.mkdir(parents=True, exist_ok=True)
+    hist.to_csv(RUTA_HISTORICO, index=False, encoding="utf-8")
+    print(f"Histórico: añadido {fila['fecha']} (gasolina {fila['Gasolina 95 E5']} | diésel {fila['Diésel']})")
+
+    # Nota al pie del gráfico de líneas, con el mismo formato que la de los mapas
+    actualizado = fecha_api or datetime.now(ZONA).strftime("%d/%m/%Y %H:%M")
+    nota = (f"Datos actualizados: {actualizado}. "
+            f"Precio medio nacional de la gasolina 95: {fmt(fila['Gasolina 95 E5'])} €/l; "
+            f"del gasóleo A: {fmt(fila['Diésel'])} €/l.")
+    (RUTA_HISTORICO.parent / "metadata_evolucion.json").write_text(
+        json.dumps({"annotate": {"notes": nota}}, ensure_ascii=False, indent=2), encoding="utf-8")
 
 # ---------- Principal ----------
 def main():
