@@ -1,26 +1,34 @@
-# precio_gasolineras
+# actualizacion_precio_gasolineras
 
-Precio medio del gasóleo A y de la gasolina 95 por provincia, actualizado cada día para dos mapas de Datawrapper.
+Precios de las gasolineras de España, actualizados cada día a partir de una única descarga de la API del Ministerio ([`run.py`](run.py)), en dos formatos:
 
-Un script en Python descarga los precios de todas las gasolineras de España desde la API del Ministerio, calcula la media de cada provincia y la compara con la media nacional. GitHub Actions lo ejecuta cada mañana y guarda los resultados en este repositorio, de donde los lee Datawrapper.
+- **Mapa de estaciones**: geometrías de cada gasolinera (PMTiles) y estadísticas de precio, para el mapa interactivo de este repositorio ([`index.html`](index.html) / [`app.js`](app.js)).
+- **Mapas provinciales de Datawrapper**: precio medio del gasóleo A y de la gasolina 95 por provincia, cada combustible en su propio CSV.
+
+GitHub Actions ejecuta `run.py` cada mañana (ver [Actualización automática](#actualización-automática)).
+
+> [`historico_precios.py`](historico_precios.py) también vive en este repositorio (evolución diaria del precio medio nacional), pero es un script independiente que no se ejecuta automáticamente.
 
 ## Cómo funciona
 
-1. **Descarga.** [`precios_carburantes.py`](precios_carburantes.py) pide el listado completo de estaciones de servicio a la [API REST de carburantes del Ministerio](https://sedeaplicaciones.minetur.gob.es/ServiciosRESTCarburantes/PreciosCarburantes/EstacionesTerrestres/).
+1. **Descarga.** `run.py` pide el listado completo de estaciones de servicio a la [API REST de carburantes del Ministerio](https://sedeaplicaciones.minetur.gob.es/ServiciosRESTCarburantes/PreciosCarburantes/EstacionesTerrestres/), una sola vez.
 2. **Comprobación.** Si faltan las columnas de provincia o de precio, o la respuesta llega vacía, el script se detiene con un error en vez de publicar datos incorrectos.
 3. **Limpieza.** Convierte los precios a números (la API usa coma decimal) y normaliza el código INE de la provincia a dos cifras.
-4. **Cálculo.** Agrupa por código INE y calcula, para cada combustible:
+4. **Geometrías.** Con las estaciones que tienen coordenadas válidas genera el GeoJSON, el MBTiles (Tippecanoe) y el `stats.json` con los cuantiles para la leyenda del mapa.
+5. **Cálculo por provincia.** Sobre los mismos datos ya descargados, agrupa por código INE y calcula, para cada combustible:
    - el precio medio de la provincia,
    - el número de estaciones con precio,
    - la diferencia con la media nacional, en céntimos por litro.
 
    La media nacional es la media de todas las estaciones de España, no la media de las medias provinciales.
-5. **Exportación.** Escribe un CSV y un JSON de metadatos por combustible en [`datos_mapa/`](datos_mapa/).
+6. **Exportación.** Escribe un CSV y un JSON de metadatos por combustible en [`datos_mapa/`](datos_mapa/).
 
 ## Archivos de salida
 
 | Archivo | Contenido |
 |---|---|
+| `data/estaciones.mbtiles` (→ `estaciones.pmtiles` en `gh-pages`) | Geometrías de cada estación, para el mapa interactivo |
+| `data/stats.json` | Mínimo, máximo y cortes por cuantiles de cada combustible, para la leyenda del mapa |
 | `datos_mapa/gasoleo.csv` | Una fila por provincia con el precio del gasóleo A |
 | `datos_mapa/gasolina.csv` | Una fila por provincia con el precio de la gasolina 95 E5 |
 | `datos_mapa/metadata_gasoleo.json` | Nota al pie del mapa del gasóleo |
@@ -57,26 +65,26 @@ Cada JSON contiene la nota al pie del mapa, con la fecha de los datos y la media
 
 Cada mapa usa un mapa coroplético de provincias de España con datos externos enlazados por URL:
 
-- **Datos:** `https://raw.githubusercontent.com/SarahIshtar/precio_gasolineras/main/datos_mapa/gasoleo.csv` (o `gasolina.csv`)
-- **Metadatos:** `https://raw.githubusercontent.com/SarahIshtar/precio_gasolineras/main/datos_mapa/metadata_gasoleo.json` (o `metadata_gasolina.json`)
+- **Datos:** `https://raw.githubusercontent.com/Newtral-datos/actualizacion_precio_gasolineras/main/datos_mapa/gasoleo.csv` (o `gasolina.csv`)
+- **Metadatos:** `https://raw.githubusercontent.com/Newtral-datos/actualizacion_precio_gasolineras/main/datos_mapa/metadata_gasoleo.json` (o `metadata_gasolina.json`)
 - **Columna de enlace con el mapa:** `clave_mapa`
 
 ## Actualización automática
 
-El workflow [`.github/workflows/actualizar_datos.yml`](.github/workflows/actualizar_datos.yml) se ejecuta todos los días a las 06:00 UTC (8:00 en horario de verano peninsular, 7:00 en invierno). Instala las dependencias, ejecuta el script y, si los datos han cambiado, hace un commit `Datos actualizados AAAA-MM-DD` con la carpeta `datos_mapa/`.
+El workflow [`.github/workflows/daily.yml`](.github/workflows/daily.yml) se ejecuta todos los días a las 05:00 UTC (7:00 en horario de verano peninsular, 6:00 en invierno). Instala las dependencias, ejecuta `run.py` (mapa de estaciones + `datos_mapa/`) y, si `datos_mapa/` ha cambiado, hace un commit en `main` con esos archivos (de ahí los lee Datawrapper por URL). Después publica el mapa de estaciones en la rama `gh-pages` junto al frontend.
 
-Para lanzarlo a mano: pestaña **Actions** → *Actualizar precios de carburantes* → **Run workflow**.
+Para lanzarlo a mano: pestaña **Actions** → *Build and Publish PMTiles + Site* → **Run workflow**.
 
 ## Ejecutarlo en local
 
-Requiere Python 3.9 o superior (el workflow usa 3.11).
+Requiere Python 3.9 o superior (el workflow usa 3.11) y [`tippecanoe`](https://github.com/felt/tippecanoe) instalado en el sistema para generar el mapa de estaciones.
 
 ```bash
 pip install -r requirements.txt
-python precios_carburantes.py
+python run.py   # mapa de estaciones (data/) + mapas provinciales (datos_mapa/)
 ```
 
-El script sobrescribe los archivos de `datos_mapa/` y muestra por pantalla la media nacional de cada combustible y los avisos, por ejemplo si alguna provincia se ha quedado sin datos ese día.
+El script sobrescribe los archivos de `data/` y `datos_mapa/` y muestra por pantalla la media nacional de cada combustible y los avisos, por ejemplo si alguna provincia se ha quedado sin datos ese día.
 
 ## Notas
 

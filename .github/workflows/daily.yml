@@ -1,0 +1,63 @@
+name: Build and Publish PMTiles + Site
+
+on:
+  schedule:
+    - cron: "0 5 * * *"     # 07:00 Madrid
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install system packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y tippecanoe
+
+      - name: Install Python deps
+        run: |
+          pip install -r requirements.txt
+
+      - name: Actualizar gasolineras, geometrías (data/) y precio por provincia (datos_mapa/)
+        run: |
+          python run.py
+
+      - name: Commit datos_mapa/ si ha cambiado
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add datos_mapa
+          git diff --cached --quiet || git commit -m "Datos actualizados $(date -u +%Y-%m-%d)"
+          git push
+
+      - name: Convert to PMTiles and prepare site
+        run: |
+          mkdir -p public
+          # convierte MBTiles -> PMTiles
+          docker run --rm -v "${{ github.workspace }}:/work" -w /work protomaps/go-pmtiles:latest \
+            convert data/estaciones.mbtiles public/estaciones.pmtiles
+          # copia datos y TU frontend (¡sin placeholder!)
+          cp -v data/stats.json public/stats.json
+          cp -v index.html public/index.html
+          cp -v styles.css public/styles.css
+          cp -v app.js public/app.js
+          echo "Contenido de public/"; ls -la public
+
+      - name: Publish to gh-pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: public
+          force_orphan: true
