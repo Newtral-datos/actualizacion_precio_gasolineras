@@ -29,15 +29,15 @@ jobs:
         run: |
           pip install -r requirements.txt
 
-      - name: Actualizar gasolineras, geometrías (data/) y precio por provincia (datos_mapa/)
+      - name: Actualizar gasolineras, geometrías (data/), precio por provincia (datos_mapa/) y evolución diaria (datos_grafico/)
         run: |
           python run.py
 
-      - name: Commit datos_mapa/ si ha cambiado
+      - name: Commit datos_mapa/ y datos_grafico/ si han cambiado
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add datos_mapa
+          git add datos_mapa datos_grafico
           git diff --cached --quiet || git commit -m "Datos actualizados $(date -u +%Y-%m-%d)"
           git push
 
