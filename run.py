@@ -281,6 +281,9 @@ def main():
     actualizado = data.get("Fecha") or ahora.strftime("%d/%m/%Y %H:%M")
     exportar_mapas(df, actualizado)
 
+    # Media nacional del día, para el gráfico de líneas
+    actualizar_historico(df, data.get("Fecha"))
+
     print(f"\nDatos del ministerio actualizados a: {actualizado}")
     print("\nMedia nacional:")
     print(media_nacional(df).to_string(index=False))
