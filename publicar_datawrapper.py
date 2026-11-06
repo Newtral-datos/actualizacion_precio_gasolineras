@@ -41,7 +41,7 @@ def publicar(id_grafico: str, token: str) -> None:
         except urllib.error.HTTPError as e:
             if e.code in (401, 403):
                 raise RuntimeError(f"Datawrapper rechaza el token ({e.code}): no existe, ha caducado, "
-                                   f"le faltan permisos (chart:read, chart:write, theme:read y visualization:read) o el gráfico es de otra cuenta.")
+                                   f"le faltan permisos (chart:read, chart:write y theme:read) o el gráfico es de otra cuenta.")
             if e.code == 404:
                 raise RuntimeError("Datawrapper no encuentra el gráfico (404): revisa el ID en GRAFICOS.")
             error = f"error {e.code}"
