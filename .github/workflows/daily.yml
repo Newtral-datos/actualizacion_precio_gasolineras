@@ -61,3 +61,11 @@ jobs:
           publish_branch: gh-pages
           publish_dir: public
           force_orphan: true
+
+      # Datawrapper solo vuelve a leer el CSV durante los 30 días siguientes a la última
+      # publicación; republicar cada día reinicia ese plazo. Va al final para que, si falla,
+      # no impida publicar el mapa de estaciones.
+      - name: Republicar gráficos en Datawrapper
+        env:
+          DATAWRAPPER_TOKEN: ${{ secrets.DATAWRAPPER_TOKEN }}
+        run: python publicar_datawrapper.py

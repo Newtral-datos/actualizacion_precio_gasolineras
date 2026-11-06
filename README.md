@@ -69,6 +69,14 @@ Cada mapa usa un mapa coroplético de provincias de España con datos externos e
 - **Metadatos:** `https://raw.githubusercontent.com/Newtral-datos/actualizacion_precio_gasolineras/main/datos_mapa/metadata_gasoleo.json` (o `metadata_gasolina.json`)
 - **Columna de enlace con el mapa:** `clave_mapa`
 
+### Republicación diaria
+
+Con la opción "Use Datawrapper server", Datawrapper solo vuelve a leer el CSV durante los 30 días siguientes a la última publicación. Por eso el último paso del workflow ejecuta [`publicar_datawrapper.py`](publicar_datawrapper.py), que republica por la API los dos mapas y el gráfico de evolución y reinicia ese plazo.
+
+- Los IDs de los gráficos están en `GRAFICOS`, al principio del script. Un ID vacío se salta con un aviso.
+- El token se guarda en el secret `DATAWRAPPER_TOKEN` (Settings → Secrets and variables → Actions). Se crea en Datawrapper, en Settings → API Tokens, con el permiso `chart:write`.
+- Si la republicación falla, el job termina en rojo, pero los datos y el mapa de estaciones ya se han publicado.
+
 ## Actualización automática
 
 El workflow [`.github/workflows/daily.yml`](.github/workflows/daily.yml) se ejecuta todos los días a las 05:00 UTC (7:00 en horario de verano peninsular, 6:00 en invierno). Instala las dependencias, ejecuta `run.py` (mapa de estaciones + `datos_mapa/`) y, si `datos_mapa/` ha cambiado, hace un commit en `main` con esos archivos (de ahí los lee Datawrapper por URL). Después publica el mapa de estaciones en la rama `gh-pages` junto al frontend.
