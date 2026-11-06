@@ -5,7 +5,7 @@ Los gráficos leen el CSV desde el servidor de Datawrapper, que solo lo vuelve a
 durante los 30 días siguientes a la última publicación. Republicar cada día reinicia ese
 plazo, así que los gráficos no se quedan congelados.
 
-El token se lee del secret DATAWRAPPER_TOKEN. Un gráfico con el ID vacío se salta con un aviso.
+El token se lee del secret DATAWRAPPER_TOKEN_GASOLINERAS. Un gráfico con el ID vacío se salta con un aviso.
 
 Uso: python publicar_datawrapper.py
 """
@@ -54,9 +54,9 @@ def publicar(id_grafico: str, token: str) -> None:
 
 
 def main():
-    token = os.environ.get("DATAWRAPPER_TOKEN")
+    token = os.environ.get("DATAWRAPPER_TOKEN_GASOLINERAS")
     if not token:
-        print("::error title=Datawrapper::Falta el secret DATAWRAPPER_TOKEN en el repositorio.")
+        print("::error title=Datawrapper::Falta el secret DATAWRAPPER_TOKEN_GASOLINERAS en el repositorio.")
         sys.exit(1)
 
     fallos = 0

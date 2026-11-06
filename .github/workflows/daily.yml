@@ -67,5 +67,5 @@ jobs:
       # no impida publicar el mapa de estaciones.
       - name: Republicar gráficos en Datawrapper
         env:
-          DATAWRAPPER_TOKEN: ${{ secrets.DATAWRAPPER_TOKEN }}
+          DATAWRAPPER_TOKEN_GASOLINERAS: ${{ secrets.DATAWRAPPER_TOKEN_GASOLINERAS }}
         run: python publicar_datawrapper.py
