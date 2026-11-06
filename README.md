@@ -74,7 +74,7 @@ Cada mapa usa un mapa coroplético de provincias de España con datos externos e
 Con la opción "Use Datawrapper server", Datawrapper solo vuelve a leer el CSV durante los 30 días siguientes a la última publicación. Por eso el último paso del workflow ejecuta [`publicar_datawrapper.py`](publicar_datawrapper.py), que republica por la API los dos mapas y el gráfico de evolución y reinicia ese plazo.
 
 - Los IDs de los gráficos están en `GRAFICOS`, al principio del script. Un ID vacío se salta con un aviso.
-- El token se guarda en el secret `DATAWRAPPER_TOKEN_GASOLINERAS` (Settings → Secrets and variables → Actions). Se crea en Datawrapper, en Settings → API Tokens, con el permiso `chart:write`.
+- El token se guarda en el secret `DATAWRAPPER_TOKEN_GASOLINERAS` (Settings → Secrets and variables → Actions). Se crea en Datawrapper, en Settings → API Tokens, con los permisos `chart:read`, `chart:write`, `theme:read` y `visualization:read`.
 - Si la republicación falla, el job termina en rojo, pero los datos y el mapa de estaciones ya se han publicado.
 
 ## Actualización automática
